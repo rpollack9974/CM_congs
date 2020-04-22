@@ -53,3 +53,11 @@ def test(p):
 		if q%4==3 and q%p==p-1:
 			print(q,CM_dimension_modp(q,p))
 	return "Done!"
+
+def test_all(p):
+	for q in primes(500):
+		if q%4==3:
+			t = CM_dimension_modp(q,p)
+			if t[0]<t[1]:
+				print(q,CM_dimension_modp(q,p))
+	return "Done!"	
