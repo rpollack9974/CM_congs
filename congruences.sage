@@ -48,3 +48,8 @@ def CM_dimension_modp(N,p):
 	return K.class_number(),M.dimension()
 
 
+def test(p):
+	for q in primes(500):
+		if q%4==3 and q%p==p-1:
+			print q,CM_dimension_modp(q,p)
+	return "Done!"
