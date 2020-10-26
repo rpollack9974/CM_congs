@@ -41,19 +41,19 @@ def CM_dimension(N,k):
 def CM_space_modp(N,r,p,verbose=False):
 	K = QuadraticField(-N)
 	if verbose:
-		print "Forming modular symbol space"
+		print("Forming modular symbol space")
 	M = ModularSymbols(N^r,2,1,GF(p)).cuspidal_subspace()
 	for q in primes(25):
 		if kronecker_symbol(K.discriminant(),q) == -1:
 			d = M.dimension()
 			if verbose:
-				print "Computing T_",q
+				print("Computing T_",q)
 			Tq = M.hecke_operator(q)
 			if verbose:
-				print "Computing kernel"
+				print("Computing kernel")
 			M = (Tq^d).kernel()
 			if verbose:
-				print "Dimension now is",M.dimension()
+				print("Dimension now is",M.dimension())
 	return M
 
 def CM_dimension_modp(N,p):
@@ -77,7 +77,7 @@ def test_all(p,Nmin,Nmax,verbose=False):
 	for q in primes(Nmin,Nmax+1):
 		if q%4==3:
 			if verbose:
-				print "Trying",q,"which is",q%p,"mod p"
+				print("Trying",q,"which is",q%p,"mod p")
 			t = CM_dimension_modp(q,p)
 			if t[0]<t[1]:
 				print(q,q%3,CM_dimension_modp(q,p))
@@ -142,7 +142,7 @@ def collect_levels_with_nonunit_Lvalue(Nmin,Nmax,p,verbose=false):
 			if max(v) > 0:
 				levels += [N]
 			if verbose:
-				print N,v
+				print(N,v)
 	return levels
 
 
