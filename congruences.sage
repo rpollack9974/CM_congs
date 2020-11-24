@@ -59,7 +59,7 @@ def CM_space_modp(N,r,p,sign=1,verbose=False):
 def CM_dimension_modp(N,p,sign=1):
 	K = QuadraticField(-N)
 	M = ModularSymbols(N^2,2,sign,GF(p)).cuspidal_subspace()
-	for q in primes(50):
+	for q in primes(25):
 		if kronecker_symbol(K.discriminant(),q) == -1:
 			d = M.dimension()
 			Tq = M.hecke_operator(q)
