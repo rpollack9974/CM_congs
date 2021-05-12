@@ -54,7 +54,9 @@ end function;
 
 //does mult for each ModSym space in the list Ms
 function mults(Ms:p_bound:=25)
-	return [mult(M) : M in Ms];
+	v:=[mult(M) : M in Ms];
+	v:=Reverse(Sort(v));
+	return v;
 end function;
 
 function main_space(p,N)
