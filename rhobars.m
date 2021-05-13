@@ -53,23 +53,45 @@ function mult(M:p_bound:=25)
 end function;
 
 //does mult for each ModSym space in the list Ms
-function mults(Ms:p_bound:=25)
+function mults(Ms:p_bound:=25,aell_output:=true)
+	if aell_output then
+		for M in Ms do
+			print mult(M),FC(M);
+		end for;
+	end if;
 	v:=[mult(M) : M in Ms];
 	v:=Reverse(Sort(v));
+
 	return v;
+end function;
+
+function FC(M:p_bound:=25)
+	fcs := [];
+	for ell in [1..p_bound] do
+		if IsPrime(ell) and Gcd(ell,Level(M)) eq 1 then
+			fell := Factorization(HeckePolynomial(M,ell))[1][1];
+			if Degree(fell) gt 1 then
+				fcs := fcs cat [<ell,fell>];
+			else
+				fcs := fcs cat [<ell,Roots(fell)[1][1]>];
+			end if;
+		end if;
+	end for;
+
+	return fcs;
 end function;
 
 function main_space(p,N)
 	return NewSubspace(CuspidalSubspace(ModularSymbols(N^2,2,GF(5),1)));
 end function;
 
-procedure find_mults(p,Nmin,Nmax)
+procedure find_mults(p,Nmin,Nmax:aell_output:=false)
 	for N in [Nmin..Nmax] do
 		if IsPrime(N) and N mod p eq p-1 then
 			M := main_space(p,N);
 			print "Level",N;
 			D := decomposition(M);
-			print mults(D);
+			print mults(D:aell_output:=aell_output);
 		end if;
 	end for;
 end procedure;
