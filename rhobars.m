@@ -1,3 +1,20 @@
+function pth_power_list(v,p)
+	return [v[a]^p : a in [1..#v]];
+end function;
+
+function abs_poly(f)
+	ans := f;
+	R := Parent(f);
+	p := Characteristic(BaseRing(Parent(f)));
+	v := Coefficients(f);
+	v := pth_power_list(v,p);
+	while R!v ne f do
+		ans := ans * R!v;
+		v := pth_power_list(v,p);
+	end while;
+	return ans;
+end function;
+
 //alpha in Fpbar returns n such that alpha is in F_p^n and not smaller
 function min_degree(alpha)
 	if alpha eq 0 then
@@ -203,23 +220,6 @@ function twists_to_level_Nsquared(p,N:p_bound:=25,max_degree:=Infinity(),verbose
 	return ans;
 end function;
 
-
-function pth_power_list(v,p)
-	return [v[a]^p : a in [1..#v]];
-end function;
-
-function abs_poly(f)
-	ans := f;
-	R := Parent(f);
-	p := Characteristic(BaseRing(Parent(f)));
-	v := Coefficients(f);
-	v := pth_power_list(v,p);
-	while R!v ne f do
-		ans := ans * R!v;
-		v := pth_power_list(v,p);
-	end while;
-	return ans;
-end function;
 
 procedure find_mults_at_level_Nsquared(p,Nmin,Nmax:aell_output:=false,p_bound:=25,check_twists:=true,verbose:=false)
 	for N in [Nmin..Nmax] do
