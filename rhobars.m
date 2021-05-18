@@ -153,18 +153,18 @@ function mults(Ms,p:p_bound:=25,aell_output:=true,check_twists:=false,twist_data
 		end if;
 
 		if check_twists then
-			if Position(twist_data,fcs) gt 0 then
+			if Position(twist_data[1],fcs) gt 0 then
 				if verbose then
-					print "twists to lower level";
+					print "eisenstein";
 				end if;
-				v[#v] := v[#v] cat [-1];
-//			else
-//				print "-->",twist_data[1],fcs;
-//				print twist_data[1] eq fcs;
-//				print twist_data[1][1],fcs[1];
-//				print twist_data[1][1],fcs[1];
-//				print Parent(twist_data[1][2]),Parent(fcs[2]);
-//				print Parent(twist_data[1][2]),Parent(fcs[2]);
+				v[#v] := v[#v] cat [-2];
+			else
+				if Position(twist_data[2],fcs) gt 0 then
+					if verbose then
+						print "twists to lower level cuspidal congruence";
+					end if;
+					v[#v] := v[#v] cat [-1];
+				end if;
 			end if;
 		end if;
 	end for;
@@ -182,31 +182,49 @@ function twists_to_level_Nsquared(p,N:p_bound:=25,max_degree:=Infinity(),verbose
 	e := Order(Integers(N-1)!p);
 	G := DirichletGroup(N,GF(p^e));
 	psi := G.1;
+	chi := psi^((N-1) div 2);
+	triv := psi^(N-1);
 
 //Eisenstein first
-	v1 := [];
-	v2 := [];
-	for q in [1..p_bound] do
-		if IsPrime(q) and Gcd(q,N*p) eq 1 then
-			v1 := v1 cat [<q,GF(p)!(1+q)>];
-			v2 := v2 cat [<q,GF(p)!((psi^((N-1) div 2))(q)*(1+q))>];
+	eisen := [**];
+	for a in [1..N-1] do
+		if a mod 2 eq 0 then
+			chis := [[triv,psi^a],[psi^a,triv],[chi,chi*psi^a],[chi*psi^a,chi]];
+			for pair in chis do
+				v := [];
+				poly := false;
+				for q in [1..p_bound] do
+					if IsPrime(q) and Gcd(q,N*p) eq 1 then
+						aq := pair[1](q) * q + pair[2](q);
+						f := MinimalPolynomial(aq);
+						f := abs_poly(f);
+						poly := poly or Degree(f) gt 1;
+						if poly then
+							v := v cat [<q,f>];
+						else
+							v := v cat [<q,aq>];
+						end if;
+					end if;
+				end for;
+				eisen := eisen cat [*v*];
+				if verbose then
+					print a;
+					print v;
+				end if;
+			end for;
 		end if;
 	end for;
-	if verbose then
-		print v1;
-		print v2;
-	end if;
-	ans := [v1,v2];
 
+	ans := [**];
 	for a in [1..N-1] do
 		if a mod 2 eq 0 then
 			M := NewSubspace(CuspidalSubspace(ModularSymbols(psi^a,2,1)));
 			As := decomposition(M);
 			for B in As do
 				if max_degree ge degree_of_field_of_definition(B:twist:=psi^(a div 2)) then
-					a1 := FC(B:p_bound:=p_bound,twist:=psi^(a div 2),exclude:=p);
-					a2 := FC(B:p_bound:=p_bound,twist:=psi^(a div 2) * psi^((N-1) div 2),exclude:=p);
-					ans := ans cat [a1,a2];
+					a1 := FC(B:p_bound:=p_bound,twist:=psi^(-a div 2),exclude:=p);
+					a2 := FC(B:p_bound:=p_bound,twist:=psi^(-a div 2) * psi^((N-1) div 2),exclude:=p);
+					ans := ans cat [*a1,a2*];
 					if verbose then
 						print "******* a =",a;
 						print a1;
@@ -217,7 +235,7 @@ function twists_to_level_Nsquared(p,N:p_bound:=25,max_degree:=Infinity(),verbose
 		end if;
 	end for;
 
-	return ans;
+	return eisen,ans;
 end function;
 
 
@@ -225,7 +243,8 @@ procedure find_mults_at_level_Nsquared(p,Nmin,Nmax:aell_output:=false,p_bound:=2
 	for N in [Nmin..Nmax] do
 		if IsPrime(N) and N mod p eq p-1 then
 			if check_twists then
-				Mtwist := twists_to_level_Nsquared(p,N:p_bound:=p_bound);
+				eisen,cusps := twists_to_level_Nsquared(p,N:p_bound:=p_bound);
+				Mtwist := [*eisen,cusps*];
 			else
 				Mtwist := -1;
 			end if;
