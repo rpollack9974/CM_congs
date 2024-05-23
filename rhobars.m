@@ -136,45 +136,71 @@ function degree_of_field_of_definition(M:p_bound:=25,verbose:=false,twist:=-1)
 end function;
 
 //does mult for each ModSym space in the list Ms
-function mults(Ms,p:p_bound:=25,aell_output:=true,check_twists:=false,twist_data:=-1,verbose:=false)
-	v := [];
+function mults(Ms,p:p_bound:=25,aell_output:=true,check_twists:=false,twist_data:=-1,verbose:=false,include_old:=true,old_data:=-1)
+	v := [**];
+	cusp_twist := false;
 	for M in Ms do
+		str := "---";
+		md := "---";
 		m := mult(M);
-		v := v cat [m];
+		fcs := FC(M:exclude:=p);
 		if verbose then
 			print m;
-		end if;
-
-		if aell_output or check_twists then
-			fcs := FC(M:exclude:=p);
 		end if;
 		if aell_output then
 			print fcs;
 		end if;
-
 		if check_twists then
 			if Position(twist_data[1],fcs) gt 0 then
 				if verbose then
 					print "eisenstein";
 				end if;
-				v[#v] := v[#v] cat [-2];
+				str := "eisen";
 			else
-				if Position(twist_data[2],fcs) gt 0 then
+				td := [twist_data[2][a][1] : a in [1..#twist_data[2]]];
+				j := Position(td,fcs);
+				if j gt 0 then
 					if verbose then
 						print "twists to lower level cuspidal congruence";
 					end if;
-					v[#v] := v[#v] cat [-1];
+					str := "cusp_twist";
+					md := twist_data[2][j][2];
 				end if;
-			end if;
+			end if;			
 		end if;
+		v := v cat [*[*m,fcs,str,md*]*];
 	end for;
-	v:=Reverse(Sort(v));
 
-	return v;
+	if include_old then
+		if verbose then
+			print "working through level N";
+		end if;
+		FCs := [v[a][2] : a in [1..#v]];
+		for M in old_data do
+			m := mult(M);
+			fcs := FC(M:exclude:=p);
+			if verbose then
+				print m;
+			end if;
+			if aell_output then
+				print fcs;
+			end if;
+			a := Position(FCs,fcs);
+			if a gt 0 then
+				v[a][1][1] := v[a][1][1] + m[1];
+				v[a][3] := v[a][3] cat ": old added";
+			end if;
+		end for;
+	end if;
+
+	muls := [v[a][1] : a in [1..#v]];
+	muls:=Reverse(Sort(muls));
+
+	return v,muls;
 end function;
 
 function new_cuspidal_modp_subspace(p,N)
-	return NewSubspace(CuspidalSubspace(ModularSymbols(N,2,GF(5),1)));
+	return NewSubspace(CuspidalSubspace(ModularSymbols(N,2,GF(p),1)));
 end function;
 
 
@@ -187,25 +213,28 @@ function twists_to_level_Nsquared(p,N:p_bound:=25,max_degree:=Infinity(),verbose
 
 //Eisenstein first
 	eisen := [**];
-	for a in [1..N-1] do
+	for a in [0..N-2] do
 		if a mod 2 eq 0 then
 			chis := [[triv,psi^a],[psi^a,triv],[chi,chi*psi^a],[chi*psi^a,chi]];
 			for pair in chis do
 				v := [];
-				poly := false;
+				need_poly := false;
 				for q in [1..p_bound] do
 					if IsPrime(q) and Gcd(q,N*p) eq 1 then
 						aq := pair[1](q) * q + pair[2](q);
 						f := MinimalPolynomial(aq);
 						f := abs_poly(f);
-						poly := poly or Degree(f) gt 1;
-						if poly then
-							v := v cat [<q,f>];
-						else
-							v := v cat [<q,aq>];
-						end if;
+						need_poly := need_poly or Degree(f) gt 1;
+						v := v cat [<q,f>];
 					end if;
 				end for;
+				if not need_poly then
+					w := [];
+					for t in v do
+						w := w cat [<t[1],Roots(t[2])[1][1]>];
+					end for;
+					v := w;
+				end if;
 				eisen := eisen cat [*v*];
 				if verbose then
 					print a;
@@ -216,7 +245,7 @@ function twists_to_level_Nsquared(p,N:p_bound:=25,max_degree:=Infinity(),verbose
 	end for;
 
 	ans := [**];
-	for a in [1..N-1] do
+	for a in [0..N-2] do
 		if a mod 2 eq 0 then
 			M := NewSubspace(CuspidalSubspace(ModularSymbols(psi^a,2,1)));
 			As := decomposition(M);
@@ -224,7 +253,7 @@ function twists_to_level_Nsquared(p,N:p_bound:=25,max_degree:=Infinity(),verbose
 				if max_degree ge degree_of_field_of_definition(B:twist:=psi^(a div 2)) then
 					a1 := FC(B:p_bound:=p_bound,twist:=psi^(-a div 2),exclude:=p);
 					a2 := FC(B:p_bound:=p_bound,twist:=psi^(-a div 2) * psi^((N-1) div 2),exclude:=p);
-					ans := ans cat [*a1,a2*];
+					ans := ans cat [*[*a1,[*Order(psi^a),"---"*]*],[*a2,[*Order(psi^a),"twist"*]*]*];
 					if verbose then
 						print "******* a =",a;
 						print a1;
@@ -238,20 +267,62 @@ function twists_to_level_Nsquared(p,N:p_bound:=25,max_degree:=Infinity(),verbose
 	return eisen,ans;
 end function;
 
+function mults_at_level_Nsquared(p,N:aell_output:=false,p_bound:=25,check_twists:=true,verbose:=false,include_old:=true)
+	if check_twists then
+		eisen,cusps := twists_to_level_Nsquared(p,N:p_bound:=p_bound);
+		Mtwist := [*eisen,cusps*];
+	else
+		Mtwist := -1;
+	end if;
+	M := new_cuspidal_modp_subspace(p,N^2);
+	print(M);
+	print "Level",N^2;
+	D := decomposition(M);
+	if include_old then
+		Mold := new_cuspidal_modp_subspace(p,N);
+		Dold := decomposition(Mold);
+	else
+		Dold := -1;
+	end if;
+	a,b := mults(D,p:check_twists:=check_twists,twist_data:=Mtwist,aell_output:=aell_output,verbose:=verbose,include_old:=include_old,old_data:=Dold);
+	return a,b;
+end function;
 
-procedure find_mults_at_level_Nsquared(p,Nmin,Nmax:aell_output:=false,p_bound:=25,check_twists:=true,verbose:=false)
+procedure collect_mults_at_level_Nsquared(p,Nmin,Nmax:aell_output:=false,p_bound:=25,check_twists:=true,verbose:=false,include_old:=true)
 	for N in [Nmin..Nmax] do
 		if IsPrime(N) and N mod p eq p-1 then
-			if check_twists then
-				eisen,cusps := twists_to_level_Nsquared(p,N:p_bound:=p_bound);
-				Mtwist := [*eisen,cusps*];
-			else
-				Mtwist := -1;
-			end if;
-			M := new_cuspidal_modp_subspace(p,N^2);
-			print "Level",N;
-			D := decomposition(M);
-			print mults(D,p:check_twists:=check_twists,twist_data:=Mtwist,aell_output:=aell_output,verbose:=verbose);
+			a,b := mults_at_level_Nsquared(p,N:aell_output:=aell_output,p_bound:=p_bound,check_twists:=check_twists,verbose:=verbose,include_old:=include_old);
+			print a,b;
 		end if;
 	end for;
 end procedure;
+
+function multiplicity_rhobar_in_space(rb,M:verbose:=false)
+	p := Characteristic(BaseRing(M));
+	N := Level(M);
+	D := decomposition(M:verbose:=verbose);
+	ans := 0;
+	for A in D do
+		found := true;
+		i := 1;
+		while found and i le #rb do
+			ell := rb[i][1];
+			if Gcd(ell,N*p) eq 1 then
+				g_ell := rb[i][2];
+				f_ell := Factorization(HeckePolynomial(A,ell))[1][1];
+				if Type(g_ell) eq FldFinElt then
+					a_ell := Roots(f_ell)[1][1];
+					found := found and a_ell eq g_ell;
+				else
+					found := found and f_ell eq g_ell;
+				end if;
+			end if;
+			i := i + 1;
+		end while;
+		if found then
+			ans := ans + Dimension(A) div Degree(f_ell);
+		end if;
+	end for;
+
+	return ans;
+end function;
