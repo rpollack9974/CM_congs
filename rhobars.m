@@ -267,7 +267,7 @@ function twists_to_level_Nsquared(p,N:p_bound:=25,max_degree:=Infinity(),verbose
 	return eisen,ans;
 end function;
 
-function mults_at_level_Nsquared(p,N:aell_output:=false,p_bound:=25,check_twists:=true,verbose:=false,include_old:=true)
+function mults_at_level_Nsquared(p,N:aell_output:=false,p_bound:=25,check_twists:=true,verbose:=false,include_old:=true,write_to_file:=false,filename:=-1)
 	if check_twists then
 		eisen,cusps := twists_to_level_Nsquared(p,N:p_bound:=p_bound);
 		Mtwist := [*eisen,cusps*];
@@ -285,6 +285,10 @@ function mults_at_level_Nsquared(p,N:aell_output:=false,p_bound:=25,check_twists
 		Dold := -1;
 	end if;
 	a,b := mults(D,p:check_twists:=check_twists,twist_data:=Mtwist,aell_output:=aell_output,verbose:=verbose,include_old:=include_old,old_data:=Dold);
+	if write_to_file then
+		Write(filename,a);
+		Write(filename,b);
+	end if;
 	return a,b;
 end function;
 
